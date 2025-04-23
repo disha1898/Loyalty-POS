@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding = "utf-8"?>
+<odoo>
+
+    <record id="loyalty_card_view_form_inherit_add_fields" model="ir.ui.view">
+        <field name="name">loyalty.card.view.form.inherit.add.fields</field>
+        <field name="model">loyalty.card</field>
+        <field name="inherit_id" ref="loyalty.loyalty_card_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form/sheet/group" position="after">
+                <notebook>
+                    <page name="Loyalty Unpoint">
+                        <field name="loyalty_card_unpoint_ids">
+                            <tree>
+                                <field name="loyalty_point"/>
+                                <field name="start_date"/>
+                                <field name="create_date"/>
+                                <field name="expire_date"/>
+                            </tree>
+                        </field>
+                    </page>
+                    <page name="History">
+                        <field name="loyalty_card_history_ids">
+                            <tree>
+                                <field name="name"/>
+                            </tree>
+                        </field>
+                    </page>
+                </notebook>
+            </xpath>
+        </field>
+    </record>
+</odoo>
