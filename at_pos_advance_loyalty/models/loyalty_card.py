@@ -16,9 +16,9 @@ class LoyaltyCard(models.Model):
             card.compute_points = card.get_custom_points() if card.program_id.program_type == 'loyalty' else card.points
     
     def get_custom_points(self):
-        return sum(self.env['loyalty.card.unpoint'].search([('start_date','<=',fields.Datetime.now()),('expire_date','>=',fields.Datetime.now()),('loyalty_card_id','=',self.id)]).mapped('loyalty_point'))
+        return sum(self.env['loyalty.card.unpoint'].search([('start_date','<=',fields.Datetime.now()),('expire_date','>=',fields.Datetime.now()),('loyalty_card_id','=',self.id)]).mapped('remaining_point'))
     
     def update_points(self):
         for rec in self:
-            rec.with_context(no_update=1).points = sum(self.env['loyalty.card.unpoint'].search([('start_date','<=',fields.Datetime.now()),('expire_date','>=',fields.Datetime.now()),('loyalty_card_id','=',rec.id)]).mapped('loyalty_point'))
+            rec.with_context(no_update=1).points = sum(self.env['loyalty.card.unpoint'].search([('start_date','<=',fields.Datetime.now()),('expire_date','>=',fields.Datetime.now()),('loyalty_card_id','=',rec.id)]).mapped('remaining_point'))
     

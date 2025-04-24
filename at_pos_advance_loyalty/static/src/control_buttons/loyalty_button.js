@@ -116,15 +116,15 @@ export class LoyaltyButton extends Component {
                 title: computePoints + " points are available",
             });
             if (confirmed) {
-                if (computePoints < selectedReward){
-                    this.env.services.popup.add(ErrorPopup, {
-                        title: _t("Warning"),
-                        body: _t(
-                            "Loyalty points exceed. You can use till " + computePoints + " Points."
-                        ),
-                    });
-                    return false;
-                }
+//                if (computePoints < selectedReward){
+//                    this.env.services.popup.add(ErrorPopup, {
+//                        title: _t("Warning"),
+//                        body: _t(
+//                            "Loyalty points exceed. You can use till " + computePoints + " Points."
+//                        ),
+//                    });
+//                    return false;
+//                }
                 rewardsList.reward.required_points = selectedReward
                 return this._applyReward(
                     rewardsList.reward,

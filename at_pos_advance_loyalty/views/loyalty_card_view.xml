@@ -12,6 +12,7 @@
                         <field name="loyalty_card_unpoint_ids">
                             <tree>
                                 <field name="loyalty_point"/>
+                                <field name="remaining_point"/>
                                 <field name="start_date"/>
                                 <field name="create_date"/>
                                 <field name="expire_date"/>
@@ -21,7 +22,8 @@
                     <page name="History">
                         <field name="loyalty_card_history_ids">
                             <tree>
-                                <field name="name"/>
+                                <field name="create_date"/>
+                                <field name="used_points"/>
                             </tree>
                         </field>
                     </page>
