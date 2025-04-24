@@ -1,3 +1,0 @@
-"id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
-loyalty_POS .access_loyalty_card_unpoint,access_loyalty_card_unpoint,loyalty_POS .model_loyalty_card_unpoint,base.group_user,1,1,1,1
-loyalty_POS .access_loyalty_card_history,access_loyalty_card_history,loyalty_POS .model_loyalty_card_history,base.group_user,1,1,1,1
