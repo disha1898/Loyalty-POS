@@ -7,29 +7,33 @@ import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
 
 patch(TicketScreen.prototype, {
-    setup() {
-        this.numberBuffer = useService("number_buffer");
-        this.numberBuffer.use({
-            triggerAtInput: (event) => this._onUpdateSelectedOrderline(event),
-        });
-        super.setup(...arguments);
-    },
-    async onDoRefund() {
-    //---------to get the points cost from the reward lines
-        var res = super.onDoRefund(...arguments);
-        let rewardLines = this._state.ui.selectedOrder.get_orderlines().filter((line) => line.is_reward_line == true)
-        let pointsCost = []
-        for(var line in rewardLines ){
-            var dict = {}
-            dict[rewardLines[line].coupon_id] = rewardLines[line].points_cost
-            pointsCost.push(dict)
-        }
-        console.log("=-=-=",pointsCost)
-        localStorage.setItem("pointsCost", JSON.stringify(pointsCost))
-        return res
-    },
 
-        _onUpdateSelectedOrderline({ key, buffer }) {
+    async onDoRefund() {
+        const oldOrder = this.getSelectedOrder();
+    //---------to get the points cost from the reward lines
+        await super.onDoRefund(...arguments);
+        const order = this.pos.get_order();
+        console.log("=-=-=order.orderlines",order.orderlines)
+        for (const line of Object.values(order.orderlines)) {
+            if (line.refunded_orderline_id) {
+                var extra_used_points = await this.pos.orm.call(
+                    "pos.order.line",
+                    "get_loyalty_points_refunded",
+                    [line.refunded_orderline_id, line.quantity]
+                );
+                line.set_refunded_loyalty_points(extra_used_points)
+            }
+        }
+        var extra_earn_points = 0
+        for (const line of Object.values(oldOrder.orderlines)){
+            if (line.is_reward_line){
+                extra_earn_points += line.points_cost
+            }
+        }
+        order.set_refunded_loyalty_earn_points(extra_earn_points)
+    },
+    
+    _onUpdateSelectedOrderline({ key, buffer }) {
         //---prevent the rewarded to line to get refunded
         const order = this.getSelectedOrder();
         if (!order) {
@@ -56,6 +60,7 @@ patch(TicketScreen.prototype, {
                 toRefundDetail.qty = 0;
             } else {
                 const quantity = Math.abs(parseFloat(buffer));
+                console.log("=-=-orderline=-",orderline)
                 if(orderline.is_reward_line == true){
                 if(quantity > 0){
                     this.popup.add(ErrorPopup, {
@@ -84,4 +89,5 @@ patch(TicketScreen.prototype, {
             }
         }
     }
+
 })

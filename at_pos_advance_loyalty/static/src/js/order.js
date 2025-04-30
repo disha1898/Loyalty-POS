@@ -3,8 +3,42 @@
 import { patch } from "@web/core/utils/patch";
 import { Order } from "@point_of_sale/app/store/models";
 
+function _newRandomRewardCode() {
+    return (Math.random() + 1).toString(36).substring(3);
+}
+
 patch(Order.prototype, {
     
+    setup(){
+        super.setup(...arguments);
+        this.refunded_loyalty_earn_points = this.refunded_loyalty_earn_points || 0;
+    },
+    
+    //@override
+    export_as_JSON() {
+        const json = super.export_as_JSON(...arguments);
+        json.refunded_loyalty_earn_points = this.refunded_loyalty_earn_points;
+        return json;
+    },
+    //@override
+    init_from_JSON(json) {
+        super.init_from_JSON(...arguments);
+        this.refunded_loyalty_earn_points = json.refunded_loyalty_earn_points;
+    },
+    
+    set_refunded_loyalty_earn_points(val){
+        this.refunded_loyalty_earn_points = val
+    },
+    
+    getRefundLoyaltyPoints(){
+        var result = {won:this.refunded_loyalty_earn_points,loss:0}
+        var extra_used_points = 0
+        for (const line of Object.values(this.orderlines)) {
+            result['loss'] += line.refunded_loyalty_points
+        }
+        return result
+    },
+//    
     _getRealCouponPoints(coupon_id) {
         let points = 0;
         const dbCoupon = this.pos.couponCache[coupon_id];
@@ -27,6 +61,85 @@ patch(Order.prototype, {
             }
         }
         return points;
+    },
+    
+    _getRewardLineValuesDiscount(args){
+        console.log("-=args",args)
+        if (args.reward.discount_mode == "per_point" && args.reward.reward_type == 'discount' && args.reward.program_id.program_type == 'loyalty'){
+            return this._getCustomRewardLineValuesDiscount(args)
+        }
+        else {
+            return super._getRewardLineValuesDiscount(...arguments)
+        }
+        
+    },
+//    
+    _getCustomRewardLineValuesDiscount(args) {
+        const reward = args["reward"];
+        const coupon_id = args["coupon_id"];
+        const rewardAppliesTo = reward.discount_applicability;
+        let getDiscountable;
+        if (rewardAppliesTo === "order") {
+            getDiscountable = this._getDiscountableOnOrder.bind(this);
+        } else if (rewardAppliesTo === "cheapest") {
+            getDiscountable = this._getDiscountableOnCheapest.bind(this);
+        } else if (rewardAppliesTo === "specific") {
+            getDiscountable = this._getDiscountableOnSpecific.bind(this);
+        }
+        if (!getDiscountable) {
+            return _t("Unknown discount type");
+        }
+        let { discountable, discountablePerTax } = getDiscountable(reward);
+        discountable = Math.min(this.get_total_with_tax(), discountable);
+        if (!discountable) {
+            return [];
+        }
+        let maxDiscount = reward.discount_max_amount || Infinity;
+        maxDiscount = Math.min(
+            maxDiscount,
+            reward.discount * args["cost"]
+        );
+        const rewardCode = _newRandomRewardCode();
+        console.log("=-=reward-=",reward)
+        let pointCost = reward.clear_wallet
+            ? this._getRealCouponPoints(coupon_id)
+            : reward.required_points;
+        console.log("=11-=-pointCost",pointCost)
+        console.log("=11-=-maxDiscount",maxDiscount)
+        if (reward.discount_mode === "per_point" && !reward.clear_wallet) {
+            pointCost = Math.min(maxDiscount, discountable) / reward.discount;
+            console.log("=22-=-pointCost",pointCost)
+            console.log("=22-=-maxDiscount",maxDiscount)
+            console.log("=22-=-discountable",discountable)
+        }
+        console.log("=-=-pointCost",pointCost)
+        // These are considered payments and do not require to be either taxed or split by tax
+        const discountProduct = reward.discount_line_product_id;
+        const discountFactor = discountable ? Math.min(1, maxDiscount / discountable) : 1;
+        const result = Object.entries(discountablePerTax).reduce((lst, entry) => {
+            // Ignore 0 price lines
+            if (!entry[1]) {
+                return lst;
+            }
+            const taxIds = entry[0] === "" ? [] : entry[0].split(",").map((str) => parseInt(str));
+            lst.push({
+                product: discountProduct,
+                price: -(entry[1] * discountFactor),
+                quantity: 1,
+                reward_id: reward.id,
+                is_reward_line: true,
+                coupon_id: coupon_id,
+                points_cost: 0,
+                reward_identifier_code: rewardCode,
+                tax_ids: taxIds,
+                merge: false,
+            });
+            return lst;
+        }, []);
+        if (result.length) {
+            result[0]["points_cost"] = pointCost;
+        }
+        return result;
     },
     
 //    pointsForPrograms(programs){

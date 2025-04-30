@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" inherit_id="point_of_sale_template" xml:space="preserve">
+    <t t-name="at_pos_advance_loyalty.ProductScreen" t-inherit="point_of_sale.ProductScreen" t-inherit-mode="extension">
+		<xpath expr="//OrderWidget/t[@t-set-slot='details']" position="inside">
+		    <div class="w-100 border-top mt-auto fw-bolder d-flex flex-column px-3 py-2 bg-200">
+		        <div class="d-flex justify-content-around gap-2 mt-1">
+                    <div t-if="pos.get_order().getRefundLoyaltyPoints()['won']" class="refund-loyalty-points-won d-flex flex-column align-items-center justify-content-center flex-grow-1 rounded bg-300 px-3 py-2" >
+                        <span class="text-muted">Refund Points Won</span>
+                        <span class='value text-success '>+<t t-esc='pos.get_order().getRefundLoyaltyPoints()["won"]'/></span>
+                    </div>
+                    <div t-if="pos.get_order().getRefundLoyaltyPoints()['loss']" class="refund-loyalty-points-won d-flex flex-column align-items-center justify-content-center flex-grow-1 rounded bg-300 px-3 py-2" >
+                        <span class="text-muted">Refund Points Loss</span>
+                        <span class='value text-danger'>-<t t-esc='pos.get_order().getRefundLoyaltyPoints()["loss"]'/></span>
+                    </div>
+                </div>
+		    </div>
+		</xpath>
+    </t>
+</templates>

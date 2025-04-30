@@ -62,11 +62,11 @@ export class LoyaltyButton extends Component {
      * @param {Object} reward
      * @param {Integer} coupon_id
      */
-    async _applyReward(reward, coupon_id, potentialQty) {
+    async _applyReward(reward, coupon_id, potentialQty,cost) {
         const order = this.pos.get_order();
         order.disabledRewards.delete(reward.id);
-
-        const args = {};
+        const args = {cost:cost};
+        console.log("=-=working-",args)
         if (reward.reward_type === "product" && reward.multi_product) {
             const productsList = reward.reward_product_ids.map((product_id) => ({
                 id: product_id,
@@ -103,7 +103,6 @@ export class LoyaltyButton extends Component {
         const rewards = this._getPotentialRewards();
         if (rewards.length >= 1) {
             const rewardsList = rewards[0];
-            console.log("=-=rewardsList",rewardsList)
             const computePoints = await this.env.services.orm.call(
                     "loyalty.card",
                     "get_custom_points",
@@ -116,20 +115,21 @@ export class LoyaltyButton extends Component {
                 title: computePoints + " points are available",
             });
             if (confirmed) {
-//                if (computePoints < selectedReward){
-//                    this.env.services.popup.add(ErrorPopup, {
-//                        title: _t("Warning"),
-//                        body: _t(
-//                            "Loyalty points exceed. You can use till " + computePoints + " Points."
-//                        ),
-//                    });
-//                    return false;
-//                }
-                rewardsList.reward.required_points = selectedReward
+                if (computePoints < selectedReward){
+                    this.env.services.popup.add(ErrorPopup, {
+                        title: _t("Warning"),
+                        body: _t(
+                            "Loyalty points exceed. You can use till " + computePoints + " Points."
+                        ),
+                    });
+                    return false;
+                }
+//                rewardsList.reward.required_points = selectedReward
                 return this._applyReward(
                     rewardsList.reward,
                     rewardsList.coupon_id,
-                    rewardsList.potentialQty
+                    rewardsList.potentialQtym,
+                    parseFloat(selectedReward)
                 );
             }
         }

@@ -13,13 +13,14 @@ patch(PaymentScreen.prototype, {
         await super.validateOrder(...arguments);
         
         const pointChanges = {};
+        const NewpointChanges = [];
         const newCodes = [];
         for (const pe of Object.values(this.currentOrder.couponPointChanges)) {
             if (pe.coupon_id > 0) {
                 pointChanges[pe.coupon_id] = pe.points;
-            } else if (pe.barcode && !pe.giftCardId) {
+            } else{
                 // New coupon with a specific code, validate that it does not exist
-                newCodes.push(pe.barcode);
+                NewpointChanges.push(pe);
             }
         }
         const newpointChanges = {};
@@ -33,20 +34,27 @@ patch(PaymentScreen.prototype, {
                 newpointChanges[line.coupon_id] -= line.points_cost;
             }
         }
+        const refunded_loyalty_points_loss = Object.values(this.currentOrder.orderlines).reduce((total, line) => total + line.refunded_loyalty_points, 0);
+        const refunded_loyalty_points_earn = this.currentOrder.refunded_loyalty_earn_points
+        var order_id = this.currentOrder
+        console.log("-=-=currentOrder=-=-",order_id.trackingNumber)
+        console.log("-=-=order_id=-=-",order_id)
         console.log("-=-=pointChanges=-=-",pointChanges)
         console.log("-=-=newpointChanges=-=-",newpointChanges)
+        console.log("-=-=-=refunded_loyalty_points",refunded_loyalty_points_loss)
+        console.log("-=-=-=refunded_loyalty_points_earn",order_id,refunded_loyalty_points_earn)
         // No need to do an rpc if no existing coupon is being used.
-        if (Object.keys(pointChanges || {}).length > 0 || Object.keys(newpointChanges || {}).length > 0) {
-            try {
-                await this.orm.call(
-                    "pos.order",
-                    "loyalty_points_validation",
-                    [[], pointChanges, newpointChanges]
-                );
-            } catch {
-                // Do nothing with error, while this validation step is nice for error messages
-                // it should not be blocking.
-            }
+        if (Object.keys(pointChanges || {}).length > 0 || Object.keys(newpointChanges || {}).length > 0 || refunded_loyalty_points_loss || refunded_loyalty_points_earn || Object.keys(NewpointChanges || {}).length > 0) {
+//            try {
+            await this.orm.call(
+                "pos.order",
+                "loyalty_points_validation",
+                [order_id.server_id, pointChanges, newpointChanges,refunded_loyalty_points_loss,refunded_loyalty_points_earn,order_id.name,NewpointChanges,order_id.partner ? order_id.partner.id : false]
+            );
+//            } catch {
+//                // Do nothing with error, while this validation step is nice for error messages
+//                // it should not be blocking.
+//            }
         }
         
     },

@@ -10,7 +10,7 @@
     'support': 'info@ativeg.tech',
     'installable': True,
     'application': True,
-    'depends': ['pos_loyalty', 'sale','advanced_loyalty_management'],
+    'depends': ['pos_loyalty', 'sale'],
     'data': [
         'security/ir.model.access.csv',
         'views/loyalty_card_view.xml',
