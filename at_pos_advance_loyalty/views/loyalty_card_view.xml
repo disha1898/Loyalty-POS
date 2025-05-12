@@ -34,6 +34,17 @@
                             </tree>
                         </field>
                     </page>
+
+                    <page name="Otp History">
+                        <field name="otp_history_ids">
+                            <tree>
+                                <field name="name"/>
+                                <field name="partner_id"/>                                
+                                <field name="otp"/>
+                                <field name="loyalty_reference"/>
+                            </tree>
+                        </field>
+                    </page>
                 </notebook>
             </xpath>
         </field>

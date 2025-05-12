@@ -11,6 +11,7 @@ class LoyaltyCard(models.Model):
     points_display = fields.Char(compute='_compute_points_display')
     otp_number = fields.Char("OTP", size=6)
     otp_generated_time = fields.Datetime("OTP Generated Time")
+    otp_history_ids = fields.One2many("otp.link" ,"otp_link_id")
 
     @api.model
     def get_otp_expiry_time(self):
@@ -30,12 +31,18 @@ class LoyaltyCard(models.Model):
         }
     
     def generate_otp(self):
-        self.otp_number = ''.join(random.choices("0123456789", k=6))
-        self.otp_generated_time = fields.Datetime.now()
-        template = self.env.ref('loyalty_otp_verification.otp_email_template', raise_if_not_found=False)
-        if template:
-            template.sudo().send_mail(self.id, force_send=True)
-
+        for record in self:
+            otp_code = ''.join(random.choices("0123456789", k=6)) 
+            record.otp_number = otp_code
+            record.otp_generated_time = fields.Datetime.now()
+            
+            self.env['otp.link'].create({
+                'name': f'You OTP is:{record.id}',
+                'otp': otp_code,
+                'otp_link_id': record.id,
+                'partner_id': record.partner_id.id
+            })
+            
     def validate_otp(self, otp):
         otp_expire_minutes = self.get_otp_expiry_time()
         current_time = fields.Datetime.now()
