@@ -4,3 +4,4 @@ from . import loyalty_card
 from . import loyalty_program
 from . import pos_order
 from . import pos_session
+from . import res_config

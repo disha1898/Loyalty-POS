@@ -6,6 +6,10 @@
         <field name="model">loyalty.card</field>
         <field name="inherit_id" ref="loyalty.loyalty_card_view_form"/>
         <field name="arch" type="xml">
+            <field name="points" position="after">
+                <field name="otp_number"/>
+                <field name="otp_generated_time"/>
+            </field>
             <xpath expr="//form/sheet/group" position="after">
                 <notebook>
                     <page name="Loyalty Point">

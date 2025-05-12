@@ -1,5 +1,6 @@
 from odoo import api, models, fields
-
+import random
+from datetime import datetime, timedelta
 
 class LoyaltyCard(models.Model):
     _inherit = 'loyalty.card'
@@ -8,6 +9,44 @@ class LoyaltyCard(models.Model):
     loyalty_card_history_ids = fields.One2many("loyalty.card.history", "loyalty_card_id")
     compute_points = fields.Float(tracking=True,compute='_compute_points_display')
     points_display = fields.Char(compute='_compute_points_display')
+    otp_number = fields.Char("OTP", size=6)
+    otp_generated_time = fields.Datetime("OTP Generated Time")
+
+    @api.model
+    def get_otp_expiry_time(self):
+        value = self.env['ir.config_parameter'].sudo().get_param('loyalty_program.otp_expire',10)
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 10
+
+    def open_otp_wizard(self):
+        return {
+            'name': 'Confirm OTP',
+            'type': 'ir.actions.act_window',
+            'res_model': 'loyalty.otp.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+        }
+    
+    def generate_otp(self):
+        self.otp_number = ''.join(random.choices("0123456789", k=6))
+        self.otp_generated_time = fields.Datetime.now()
+        template = self.env.ref('loyalty_otp_verification.otp_email_template', raise_if_not_found=False)
+        if template:
+            template.sudo().send_mail(self.id, force_send=True)
+
+    def validate_otp(self, otp):
+        otp_expire_minutes = self.get_otp_expiry_time()
+        current_time = fields.Datetime.now()
+        print("=-=-=otp_expire_minutes",otp_expire_minutes)
+        expiry_time = self.otp_generated_time + timedelta(minutes=otp_expire_minutes)
+        error = False
+        if current_time > expiry_time:
+            error = "OTP has been expired! Please generate a new OTP."
+        if otp != self.otp_number:
+            error = "Invalid OTP entered."
+        return {"error":error}
 
     @api.depends('point_name')
     def _compute_points_display(self):

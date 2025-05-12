@@ -66,7 +66,6 @@ export class LoyaltyButton extends Component {
         const order = this.pos.get_order();
         order.disabledRewards.delete(reward.id);
         const args = {cost:cost};
-        console.log("=-=working-",args)
         if (reward.reward_type === "product" && reward.multi_product) {
             const productsList = reward.reward_product_ids.map((product_id) => ({
                 id: product_id,
@@ -108,23 +107,51 @@ export class LoyaltyButton extends Component {
                     "get_custom_points",
                     [[rewardsList.coupon_id]]
                 );
-
+            var MinimumUsagePoints = rewardsList.reward.program_id.minimum_usage_points
             const order = this.pos.get_order();
+            console.log("=-=rewardsList",rewardsList,MinimumUsagePoints,computePoints)
+            
+            var newOTP = await this.env.services.orm.call(
+                    "loyalty.card",
+                    "generate_otp",
+                    [[rewardsList.coupon_id]]
+                );
+            
+            const { confirmed:entered, payload: otp } = await this.popup.add(NumberPopup, {
+                title: "OTP has been send to registered mobile number."
+            });
+            console.log("=-=-",entered,otp)
+            if (!entered){
+                return false;
+            }
+            var result = await this.env.services.orm.call(
+                "loyalty.card",
+                "validate_otp",
+                [[rewardsList.coupon_id],otp]
+            );
+            if (result.error){
+                this.env.services.popup.add(ErrorPopup, {
+                    title: _t("Warning"),
+                    body: _t(
+                        result.error
+                    ),
+                });
+                return false;
+            }
             
             const { confirmed, payload: selectedReward } = await this.popup.add(NumberPopup, {
                 title: computePoints + " points are available",
             });
             if (confirmed) {
-                if (computePoints < selectedReward){
+                if (selectedReward < MinimumUsagePoints || selectedReward > computePoints){
                     this.env.services.popup.add(ErrorPopup, {
                         title: _t("Warning"),
                         body: _t(
-                            "Loyalty points exceed. You can use till " + computePoints + " Points."
+                            "Loyalty points exceed. You can use points between " + MinimumUsagePoints +" - " + computePoints + " Points."
                         ),
                     });
                     return false;
                 }
-//                rewardsList.reward.required_points = selectedReward
                 return this._applyReward(
                     rewardsList.reward,
                     rewardsList.coupon_id,

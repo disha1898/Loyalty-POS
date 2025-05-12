@@ -46,7 +46,6 @@ class PosOrder(models.Model):
     
     def loyalty_points_validation(self,addedPoints,usedPoints,refundLoyaltyLoss,refundLoyaltyEarn,tracking_number,NewpointChanges,partner):
         partner_id = self.env['res.partner'].search([('id','=',partner)])
-        print("=-=-partner_id",partner_id,NewpointChanges)
         if NewpointChanges:
             for newpoints in NewpointChanges:
                 val = {

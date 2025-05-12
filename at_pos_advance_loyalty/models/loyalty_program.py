@@ -4,6 +4,8 @@ from odoo import api, models, fields
 class LoyaltyProgram(models.Model):
     _inherit = 'loyalty.program'
     
+    minimum_usage_points = fields.Float(string="Minimum Usage Points")
+    
     @api.model
     def create(self,vals):
         records = super(LoyaltyProgram,self).create(vals)

@@ -14,6 +14,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/loyalty_card_view.xml',
+        'views/loyalty_program.xml'
         ],
     'assets':{
         'point_of_sale._assets_pos': [

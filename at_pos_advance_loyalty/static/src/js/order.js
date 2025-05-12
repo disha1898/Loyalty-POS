@@ -63,8 +63,66 @@ patch(Order.prototype, {
         return points;
     },
     
+    pointsForPrograms(programs){
+        var result = super.pointsForPrograms(...arguments);
+        console.log("-==-result-=-",result)
+        const rewardLines = this.orderlines.filter((line) => line.is_reward_line);
+        if (rewardLines.length > 0){
+            for (const key in result){
+                console.log('==---',result[key])
+                result[key] = []
+            }
+        }
+        console.log("-f==-result-=-",result)
+        return result
+    },
+    
+    getLoyaltyPoints() {
+        // map: couponId -> LoyaltyPoints
+        const loyaltyPoints = {};
+        for (const pointChange of Object.values(this.couponPointChanges)) {
+            const { coupon_id, points, program_id } = pointChange;
+            const program = this.pos.program_by_id[program_id];
+            if (program.program_type !== "loyalty") {
+                // Not a loyalty program, skip
+                continue;
+            }
+            const loyaltyCard = this.pos.couponCache[coupon_id] || /* or new card */ {
+                id: coupon_id,
+                balance: 0,
+            };
+            const rewardLines = this.orderlines.filter((line) => line.is_reward_line);
+            let [won, spent, total] = [0, 0, 0];
+            const balance = loyaltyCard.balance;
+            won += rewardLines.length > 0 ? 0 :(points - this._getPointsCorrection(program));
+            if (coupon_id !== 0) {
+                for (const line of this._get_reward_lines()) {
+                    if (line.coupon_id === coupon_id) {
+                        spent += line.points_cost;
+                    }
+                }
+            }
+            total = balance + won - spent;
+            const name = program.portal_visible ? program.portal_point_name : _t("Points");
+            loyaltyPoints[coupon_id] = {
+                won: parseFloat(won.toFixed(2)),
+                spent: parseFloat(spent.toFixed(2)),
+                // Display total when order is ongoing.
+                total: parseFloat(total.toFixed(2)),
+                // Display balance when order is done.
+                balance: parseFloat(balance.toFixed(2)),
+                name,
+                program,
+            };
+        }
+        return Object.entries(loyaltyPoints).map(([couponId, points]) => ({
+            couponId,
+            points,
+            program: points.program,
+        }));
+    },
+    
     _getRewardLineValuesDiscount(args){
-        console.log("-=args",args)
         if (args.reward.discount_mode == "per_point" && args.reward.reward_type == 'discount' && args.reward.program_id.program_type == 'loyalty'){
             return this._getCustomRewardLineValuesDiscount(args)
         }
@@ -100,19 +158,12 @@ patch(Order.prototype, {
             reward.discount * args["cost"]
         );
         const rewardCode = _newRandomRewardCode();
-        console.log("=-=reward-=",reward)
         let pointCost = reward.clear_wallet
             ? this._getRealCouponPoints(coupon_id)
             : reward.required_points;
-        console.log("=11-=-pointCost",pointCost)
-        console.log("=11-=-maxDiscount",maxDiscount)
         if (reward.discount_mode === "per_point" && !reward.clear_wallet) {
             pointCost = Math.min(maxDiscount, discountable) / reward.discount;
-            console.log("=22-=-pointCost",pointCost)
-            console.log("=22-=-maxDiscount",maxDiscount)
-            console.log("=22-=-discountable",discountable)
         }
-        console.log("=-=-pointCost",pointCost)
         // These are considered payments and do not require to be either taxed or split by tax
         const discountProduct = reward.discount_line_product_id;
         const discountFactor = discountable ? Math.min(1, maxDiscount / discountable) : 1;
