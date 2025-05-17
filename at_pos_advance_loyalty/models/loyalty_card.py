@@ -47,7 +47,7 @@ class LoyaltyCard(models.Model):
     def validate_otp(self, otp):
         otp_expire_minutes = self.get_otp_expiry_time()
         current_time = fields.Datetime.now()
-        print("=-=-=otp_expire_minutes",otp_expire_minutes)
+        # print("=-=-=otp_expire_minutes",otp_expire_minutes)
         expiry_time = self.otp_generated_time + timedelta(minutes=otp_expire_minutes)
         error = False
         if current_time > expiry_time:
