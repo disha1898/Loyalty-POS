@@ -111,6 +111,25 @@ export class LoyaltyButton extends Component {
             const order = this.pos.get_order();
             console.log("=-=rewardsList",rewardsList,MinimumUsagePoints,computePoints)
             
+            const { confirmed, payload: selectedReward } = await this.popup.add(NumberPopup, {
+                title: computePoints + " points are available",
+            });
+            var valid_reward = selectedReward
+            if (confirmed) {
+                if (valid_reward < MinimumUsagePoints || valid_reward > computePoints){
+                    this.env.services.popup.add(ErrorPopup, {
+                        title: _t("Warning"),
+                        body: _t(
+                            "Loyalty points exceed. You can use points between " + MinimumUsagePoints +" - " + computePoints + " Points."
+                        ),
+                    });
+                    return false;
+                }
+                return 
+            } else {
+                return false;
+            }
+            
             var newOTP = await this.env.services.orm.call(
                     "loyalty.card",
                     "generate_otp",
@@ -137,26 +156,12 @@ export class LoyaltyButton extends Component {
                     ),
                 });
                 return false;
-            }
-            
-            const { confirmed, payload: selectedReward } = await this.popup.add(NumberPopup, {
-                title: computePoints + " points are available",
-            });
-            if (confirmed) {
-                if (selectedReward < MinimumUsagePoints || selectedReward > computePoints){
-                    this.env.services.popup.add(ErrorPopup, {
-                        title: _t("Warning"),
-                        body: _t(
-                            "Loyalty points exceed. You can use points between " + MinimumUsagePoints +" - " + computePoints + " Points."
-                        ),
-                    });
-                    return false;
-                }
-                return this._applyReward(
+            } else {
+                this._applyReward(
                     rewardsList.reward,
                     rewardsList.coupon_id,
                     rewardsList.potentialQtym,
-                    parseFloat(selectedReward)
+                    parseFloat(valid_reward)
                 );
             }
         }

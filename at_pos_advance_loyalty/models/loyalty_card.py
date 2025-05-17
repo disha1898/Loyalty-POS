@@ -36,12 +36,13 @@ class LoyaltyCard(models.Model):
             record.otp_number = otp_code
             record.otp_generated_time = fields.Datetime.now()
             
-            self.env['otp.link'].create({
+            otp_link = self.env['otp.link'].create({
                 'name': f'You OTP is:{record.id}',
                 'otp': otp_code,
                 'otp_link_id': record.id,
                 'partner_id': record.partner_id.id
             })
+            otp_link.send_message_sms()
             
     def validate_otp(self, otp):
         otp_expire_minutes = self.get_otp_expiry_time()

@@ -10,12 +10,73 @@ patch(PaymentScreen.prototype, {
 
     //@override
     async validateOrder(isForceValidate) {
-        await super.validateOrder(...arguments);
-        
-        const pointChanges = {};
-        const NewpointChanges = [];
-        const newCodes = [];
-        for (const pe of Object.values(this.currentOrder.couponPointChanges)) {
+        var pointChanges = {};
+        var newCodes = [];
+        for (var pe of Object.values(this.currentOrder.couponPointChanges)) {
+            if (pe.coupon_id > 0) {
+                pointChanges[pe.coupon_id] = pe.points;
+            } else if (pe.barcode && !pe.giftCardId) {
+                // New coupon with a specific code, validate that it does not exist
+                newCodes.push(pe.barcode);
+            }
+        }
+        for (var line of this.currentOrder._get_reward_lines()) {
+            if (line.coupon_id < 1) {
+                continue;
+            }
+            if (!pointChanges[line.coupon_id]) {
+                pointChanges[line.coupon_id] = -line.points_cost;
+            } else {
+                pointChanges[line.coupon_id] -= line.points_cost;
+            }
+        }
+        if (!(await this._isOrderValid(isForceValidate))) {
+            return;
+        }
+        // No need to do an rpc if no existing coupon is being used.
+        if (Object.keys(pointChanges || {}).length > 0 || newCodes.length) {
+            try {
+                var { successful, payload } = await this.orm.call(
+                    "pos.order",
+                    "validate_coupon_programs",
+                    [[], pointChanges, newCodes]
+                );
+                // Payload may contain the points of the concerned coupons to be updated in case of error. (So that rewards can be corrected)
+                var { couponCache } = this.pos;
+                if (payload && payload.updated_points) {
+                    for (var pointChange of Object.entries(payload.updated_points)) {
+                        if (couponCache[pointChange[0]]) {
+                            couponCache[pointChange[0]].balance = pointChange[1];
+                        }
+                    }
+                }
+                if (payload && payload.removed_coupons) {
+                    for (var couponId of payload.removed_coupons) {
+                        if (couponCache[couponId]) {
+                            delete couponCache[couponId];
+                        }
+                    }
+                    this.currentOrder.codeActivatedCoupons =
+                        this.currentOrder.codeActivatedCoupons.filter(
+                            (coupon) => !payload.removed_coupons.includes(coupon.id)
+                        );
+                }
+                if (!successful) {
+                    this.popup.add(ErrorPopup, {
+                        title: _t("Error validating rewards"),
+                        body: payload.message,
+                    });
+                    return;
+                }
+            } catch {
+                // Do nothing with error, while this validation step is nice for error messages
+                // it should not be blocking.
+            }
+        }
+        var pointChanges = {};
+        var NewpointChanges = [];
+        var newCodes = [];
+        for (var pe of Object.values(this.currentOrder.couponPointChanges)) {
             if (pe.coupon_id > 0) {
                 pointChanges[pe.coupon_id] = pe.points;
             } else{
@@ -23,8 +84,8 @@ patch(PaymentScreen.prototype, {
                 NewpointChanges.push(pe);
             }
         }
-        const newpointChanges = {};
-        for (const line of this.currentOrder._get_reward_lines()) {
+        var newpointChanges = {};
+        for (var line of this.currentOrder._get_reward_lines()) {
             if (line.coupon_id < 1) {
                 continue;
             }
@@ -34,8 +95,8 @@ patch(PaymentScreen.prototype, {
                 newpointChanges[line.coupon_id] -= line.points_cost;
             }
         }
-        const refunded_loyalty_points_loss = Object.values(this.currentOrder.orderlines).reduce((total, line) => total + line.refunded_loyalty_points, 0);
-        const refunded_loyalty_points_earn = this.currentOrder.refunded_loyalty_earn_points
+        var refunded_loyalty_points_loss = Object.values(this.currentOrder.orderlines).reduce((total, line) => total + line.refunded_loyalty_points, 0);
+        var refunded_loyalty_points_earn = this.currentOrder.refunded_loyalty_earn_points
         var order_id = this.currentOrder
         console.log("-=-=currentOrder=-=-",order_id.trackingNumber)
         console.log("-=-=order_id=-=-",order_id)
@@ -56,7 +117,7 @@ patch(PaymentScreen.prototype, {
 //                // it should not be blocking.
 //            }
         }
-        
+        await super.validateOrder(...arguments);
     },
 
 })

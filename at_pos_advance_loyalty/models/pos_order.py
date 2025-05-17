@@ -48,11 +48,16 @@ class PosOrder(models.Model):
         partner_id = self.env['res.partner'].search([('id','=',partner)])
         if NewpointChanges:
             for newpoints in NewpointChanges:
-                val = {
-                        'program_id': newpoints.get('program_id'),
-                        'partner_id': partner_id.id
-                    }
-                coupon = self.env['loyalty.card'].sudo().create(val)
+                domain = [('program_id','=',newpoints.get('program_id')),('partner_id','=',partner_id.id),('program_type','=','loyalty')]
+                coupon = self.env['loyalty.card'].sudo().search(domain,limit=1)
+                if not coupon:
+                    val = {
+                            'program_id': newpoints.get('program_id'),
+                            'partner_id': partner_id.id,
+                            'program_type' : 'loyalty'
+                        }
+                    coupon = self.env['loyalty.card'].sudo().create(val)
+                    coupon.env.cr.commit()
                 addedPoints[coupon.id] = newpoints.get('points')
         if addedPoints:
             for coupon in addedPoints:

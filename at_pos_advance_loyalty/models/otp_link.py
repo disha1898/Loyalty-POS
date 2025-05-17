@@ -10,8 +10,6 @@ class OTPLink(models.Model):
     partner_id = fields.Many2one('res.partner', string="Customer")
     otp_link_id = fields.Many2one("loyalty.card")
     
-    
-        
     def send_message_sms(self, partner_id=False, condition=''):
         if not (condition):
             return
